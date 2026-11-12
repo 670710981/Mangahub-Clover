@@ -6,7 +6,7 @@ function shuffle(list) {
   const a = [...list]
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
+      ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
 }
@@ -53,7 +53,10 @@ function Home() {
         {status === 'error' && (
           <p className="px-6 text-sm text-red-400">โหลดข้อมูลไม่สำเร็จ: {error}</p>
         )}
-        {status === 'success' && (
+        {status === 'success' && items.length === 0 && (
+          <p className="px-6 text-sm text-zinc-400">ไม่พบมังงะ</p>
+        )}
+        {status === 'success' && items.length > 0 && (
           <div
             className="ml-6 flex w-max animate-marquee"
             style={{ animationDuration: `${items.length * 3}s` }}
