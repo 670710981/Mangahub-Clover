@@ -21,6 +21,20 @@ const LIST_QUERY = `
   }
 `
 
+const DETAIL_QUERY = `
+  query ($id: Int) {
+    Media(id: $id, type: MANGA) {
+      id
+      title { romaji english native }
+      coverImage { extraLarge large }
+      description(asHtml: false)
+      averageScore
+      countryOfOrigin
+      chapters
+    }
+  }
+`
+
 const GENRES_QUERY = `query { GenreCollection }`
 
 const TYPE_BY_COUNTRY = { JP: 'MANGA', KR: 'MANHWA', CN: 'MANHUA', TW: 'MANHUA' }
@@ -65,6 +79,28 @@ export async function fetchMangaPage(params) {
   const json = await anilistRequest(LIST_QUERY, listVariables(params))
   const { media, pageInfo } = json.data.Page
   return { items: media.map(toManga), hasNext: pageInfo.hasNextPage }
+}
+
+// เรื่องย่อจาก AniList อาจมีแท็ก HTML (เช่น <br>) ปนมา จึงล้างออกก่อนแสดง
+function cleanDescription(text) {
+  if (!text) return ''
+  return text
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/** ดึงรายละเอียดมังงะ 1 เรื่อง (chapters เป็น null ได้ถ้ายังไม่จบ/ไม่ระบุ) */
+export async function fetchMangaById(id) {
+  const json = await anilistRequest(DETAIL_QUERY, { id: Number(id) })
+  const media = json.data.Media
+  return {
+    ...toManga(media),
+    cover: media.coverImage?.extraLarge ?? media.coverImage?.large ?? '',
+    description: cleanDescription(media.description),
+    chapters: media.chapters,
+  }
 }
 
 export async function fetchGenres() {

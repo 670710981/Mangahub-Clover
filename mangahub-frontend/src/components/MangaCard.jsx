@@ -1,8 +1,9 @@
+import { Link } from 'react-router-dom'
 import Stars from './Stars.jsx'
 
 export default function MangaCard({ manga, chapters, dark = false, className = '' }) {
   return (
-    <article className={className}>
+    <Link to={`/manga/${manga.id}`} className={`block ${className}`}>
       <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-slate-200">
         <img
           src={manga.cover}
@@ -32,6 +33,6 @@ export default function MangaCard({ manga, chapters, dark = false, className = '
           {manga.score != null ? manga.score.toFixed(1) : '-'}
         </span>
       </div>
-    </article>
+    </Link>
   )
 }
