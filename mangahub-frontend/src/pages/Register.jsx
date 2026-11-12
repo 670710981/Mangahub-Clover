@@ -37,7 +37,7 @@ function Register() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
-      <form onSubmit={onSubmit} noValidate className="max-w-md">
+      <form onSubmit={onSubmit} noValidate className="mx-auto max-w-md">
         <h1 className="mb-6 text-2xl font-semibold text-slate-900">สมัครสมาชิก</h1>
 
         <div className="space-y-3">
