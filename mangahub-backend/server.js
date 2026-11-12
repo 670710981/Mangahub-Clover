@@ -1,49 +1,32 @@
 const express = require('express');
 const cors = require('cors');
+const db = require('./config/db');
+const authRoutes = require('./routes/authRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const favoriteRoutes = require('./routes/favoriteRoutes');
 require('dotenv').config();
 
 const app = express();
-
-app.use(cors());
+app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
 app.use(express.json());
 
-// ข้อมูลจำลอง (Mock Data)
-let favoritesMock = [
-  { mangaId: '1', title: 'One Piece', imageUrl: 'https://cdn.myanimelist.net/images/manga/2/253146.jpg' },
-  { mangaId: '2', title: 'Jujutsu Kaisen', imageUrl: 'https://cdn.myanimelist.net/images/manga/3/218042.jpg' }
-];
-
-// Routes
 app.get('/', (req, res) => {
-  res.status(200).send('MangaHub Backend API is running!');
+  res.json({ message: 'Welcome to MangaHub API' });
 });
 
-app.get('/api/favorites', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    data: favoritesMock
-  });
-});
-
-app.post('/api/favorites', (req, res) => {
-  const { mangaId, title, imageUrl } = req.body;
-
-  if (!mangaId || !title) {
-    return res.status(400).json({ status: 'fail', message: 'mangaId and title are required' });
+// 1. Route ทดสอบเช็กสถานะ DB
+app.get('/api/health', async (req, res) => {
+  try {
+    const result = await db.query('SELECT NOW()');
+    res.json({ status: 'ok', db_time: result.rows[0].now });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: err.message });
   }
-
-  const newItem = { mangaId, title, imageUrl };
-  favoritesMock.push(newItem);
-
-  res.status(201).json({
-    status: 'success',
-    message: 'Added to favorites',
-    data: newItem
-  });
 });
+app.use('/api', authRoutes);
+app.use('/api', reviewRoutes);
+app.use('/api', favoriteRoutes);
 
 const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

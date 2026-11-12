@@ -1,14 +1,14 @@
-const mongoose = require('mongoose');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-const connectDB = async () => {
-  try {
-    // ใส่ URI ของ MongoDB (หรือ local: mongodb://127.0.0.1:27017/mangahub)
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/mangahub');
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`Error: ${error.message}`);
-    process.exit(1);
-  }
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+pool.on('connect', () => {
+  console.log('PostgreSQL Connected Successfully!');
+});
+
+module.exports = {
+  query: (text, params) => pool.query(text, params),
 };
-
-module.exports = connectDB;
