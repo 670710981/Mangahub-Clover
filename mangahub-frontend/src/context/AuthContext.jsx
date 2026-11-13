@@ -13,9 +13,8 @@ function readSession() {
   }
 }
 
-async function sendRequest(path, { method = 'POST', body, authenticated = false } = {}) {
+async function request(path, { method = 'GET', body, authenticated = false } = {}) {
   const headers = { 'Content-Type': 'application/json' }
-
   if (authenticated) {
     const token = localStorage.getItem(TOKEN_KEY)
     if (token) headers.Authorization = `Bearer ${token}`
@@ -26,13 +25,8 @@ async function sendRequest(path, { method = 'POST', body, authenticated = false 
     headers,
     ...(body ? { body: JSON.stringify(body) } : {}),
   })
-
   const data = await response.json().catch(() => null)
-
-  if (!response.ok) {
-    throw new Error(data?.message || `HTTP ${response.status}`)
-  }
-
+  if (!response.ok) throw new Error(data?.message || `HTTP ${response.status}`)
   return data
 }
 
@@ -44,7 +38,6 @@ function saveSession(data, setUser) {
     avatar: data.user.avatar_url,
     role: data.user.role,
   }
-
   localStorage.setItem(TOKEN_KEY, data.token)
   localStorage.setItem(SESSION_KEY, JSON.stringify(account))
   setUser(account)
@@ -57,14 +50,10 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async ({ name, email, password }) => {
     try {
-      const data = await sendRequest('/auth/register', {
-        body: {
-          username: name.trim(),
-          email: email.trim().toLowerCase(),
-          password,
-        },
+      const data = await request('/auth/register', {
+        method: 'POST',
+        body: { username: name.trim(), email: email.trim().toLowerCase(), password },
       })
-
       saveSession(data, setUser)
       return { ok: true }
     } catch (error) {
@@ -74,13 +63,10 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async ({ email, password }) => {
     try {
-      const data = await sendRequest('/auth/login', {
-        body: {
-          email: email.trim().toLowerCase(),
-          password,
-        },
+      const data = await request('/auth/login', {
+        method: 'POST',
+        body: { email: email.trim().toLowerCase(), password },
       })
-
       saveSession(data, setUser)
       return { ok: true }
     } catch (error) {
@@ -96,13 +82,10 @@ export function AuthProvider({ children }) {
 
   const changePassword = useCallback(async ({ current, next }) => {
     try {
-      await sendRequest('/auth/change-password', {
+      await request('/auth/change-password', {
         method: 'PUT',
         authenticated: true,
-        body: {
-          currentPassword: current,
-          newPassword: next,
-        },
+        body: { currentPassword: current, newPassword: next },
       })
       return { ok: true }
     } catch (error) {
@@ -110,23 +93,19 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Avatar ยังบันทึกไว้ในเบราว์เซอร์ ยังไม่ได้ส่งไปเก็บในฐานข้อมูล
-  const updateAvatar = useCallback(
-    (avatar) => {
-      if (!user) return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อน' }
-
-      const updatedUser = { ...user, avatar }
-
-      try {
-        localStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser))
-        setUser(updatedUser)
-        return { ok: true }
-      } catch {
-        return { ok: false, error: 'บันทึกรูปไม่สำเร็จ' }
-      }
-    },
-    [user],
-  )
+  // Avatar is stored in the browser until a profile-image endpoint is added.
+  const updateAvatar = useCallback((avatar) => {
+    const currentUser = readSession()
+    if (!currentUser) return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อน' }
+    const updatedUser = { ...currentUser, avatar }
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser))
+      setUser(updatedUser)
+      return { ok: true }
+    } catch {
+      return { ok: false, error: 'บันทึกรูปโปรไฟล์ไม่สำเร็จ' }
+    }
+  }, [])
 
   const value = useMemo(
     () => ({ user, register, login, logout, changePassword, updateAvatar }),

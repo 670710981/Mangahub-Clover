@@ -5,9 +5,14 @@ function Footer() {
         <div className="text-center sm:text-left font-medium text-slate-300">
           MangaHub โปรเจ็กต์รวบรวมมังงะ
         </div>
-        <div className="text-center sm:text-right text-slate-400 text-xs sm:text-sm">
+        <a
+          href="https://anilist.co/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-center text-xs text-slate-400 transition hover:text-emerald-400 sm:text-right sm:text-sm"
+        >
           ข้อมูลมังงะจาก AniList
-        </div>
+        </a>
       </div>
     </footer>
   );

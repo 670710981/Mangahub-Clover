@@ -111,7 +111,8 @@ func GetReviews(c *fiber.Ctx) error {
 	rows, err := config.DB.Query(context.Background(),
 		`SELECT r.id, r.manga_id, r.rating, r.comment, r.created_at, u.username, u.avatar_url
 		 FROM reviews r JOIN users u ON r.user_id = u.id
-		 WHERE r.manga_id = $1 ORDER BY r.created_at DESC`, mangaID)
+		 WHERE r.manga_id = (SELECT id FROM mangas WHERE COALESCE(anilist_id, id) = $1)
+		 ORDER BY r.created_at DESC`, mangaID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Failed to fetch reviews"})
 	}
@@ -143,6 +144,10 @@ func GetReviews(c *fiber.Ctx) error {
 func PostReview(c *fiber.Ctx) error {
 	mangaID := c.Params("id")
 	userID := c.Locals("user_id").(int)
+	var localMangaID int
+	if err := config.DB.QueryRow(context.Background(), `SELECT id FROM mangas WHERE COALESCE(anilist_id, id) = $1`, mangaID).Scan(&localMangaID); err != nil {
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Manga not found"})
+	}
 	var body struct {
 		Rating  int    `json:"rating"`
 		Comment string `json:"comment"`
@@ -158,7 +163,7 @@ func PostReview(c *fiber.Ctx) error {
 		 ON CONFLICT (user_id, manga_id)
 		 DO UPDATE SET rating = EXCLUDED.rating, comment = EXCLUDED.comment, updated_at = CURRENT_TIMESTAMP
 		 RETURNING id, manga_id, user_id, rating, comment, created_at`,
-		userID, mangaID, body.Rating, body.Comment,
+		userID, localMangaID, body.Rating, body.Comment,
 	).Scan(&rev.ID, &rev.MangaID, &rev.UserID, &rev.Rating, &rev.Comment, &rev.CreatedAt)
 
 	if err != nil {

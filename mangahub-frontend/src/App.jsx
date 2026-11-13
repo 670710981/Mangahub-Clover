@@ -8,6 +8,7 @@ import ApiLab from './pages/ApiLab.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import Profile from './pages/Profile.jsx'
+import Favorites from './pages/Favorites.jsx'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="favorites" element={<Favorites />} />
       </Route>
     </Routes>
   )

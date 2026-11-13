@@ -19,7 +19,14 @@ function About() {
       <hr className="my-8 w-full border-t border-slate-200" />
 
       <div className="mx-auto flex max-w-3xl items-start gap-3 px-4 text-sm text-slate-500">
-        <span className="font-bold text-emerald-600">Anilist</span>
+        <a
+          href="https://anilist.co/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-bold text-emerald-600 hover:text-emerald-700 hover:underline"
+        >
+          AniList
+        </a>
         <p>ข้อมูลมังงะและภาพดึงมาจาก anilist ทั้งหมด</p>
       </div>
     </div>

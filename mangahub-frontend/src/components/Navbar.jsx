@@ -14,7 +14,6 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
   const menuRef = useRef(null)
 
-  // ปิดเมนูเมื่อคลิกนอกเมนู หรือกด Esc
   useEffect(() => {
     if (!open) return undefined
 
@@ -24,8 +23,10 @@ export default function Navbar() {
     const onKey = (e) => {
       if (e.key === 'Escape') setOpen(false)
     }
+
     document.addEventListener('mousedown', onClick)
     document.addEventListener('keydown', onKey)
+
     return () => {
       document.removeEventListener('mousedown', onClick)
       document.removeEventListener('keydown', onKey)
@@ -45,6 +46,13 @@ export default function Navbar() {
         <NavLink to="/manga" className={linkClass}>
           Manga
         </NavLink>
+
+        {user && (
+          <NavLink to="/favorites" className={linkClass}>
+            Favorites
+          </NavLink>
+        )}
+
         <NavLink to="/about" className={linkClass}>
           About
         </NavLink>
@@ -53,11 +61,12 @@ export default function Navbar() {
           <NavLink to="/api-lab" className={linkClass}>
             API Lab
           </NavLink>
+
           {user ? (
             <div ref={menuRef} className="relative">
               <button
                 type="button"
-                onClick={() => setOpen((v) => !v)}
+                onClick={() => setOpen((value) => !value)}
                 aria-haspopup="menu"
                 aria-expanded={open}
                 className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50"
