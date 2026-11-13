@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const db = require('./config/db');
+require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
-require('dotenv').config();
+const mangaRoutes = require('./routes/mangaRoutes');
+
 
 const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
@@ -25,6 +27,7 @@ app.get('/api/health', async (req, res) => {
   }
 });
 app.use('/api', authRoutes);
+app.use('/api', mangaRoutes);
 app.use('/api', reviewRoutes);
 app.use('/api', favoriteRoutes);
 

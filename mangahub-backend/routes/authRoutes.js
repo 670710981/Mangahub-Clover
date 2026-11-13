@@ -71,8 +71,8 @@ router.post('/auth/dev-login', async (req, res) => {
     const dbRes = await db.query(
       `INSERT INTO users (username, email, avatar_url)
        VALUES ($1, $2, 'https://via.placeholder.com/150')
-       ON CONFLICT (username) 
-       DO UPDATE SET email = EXCLUDED.email
+       ON CONFLICT (email) 
+       DO UPDATE SET username = EXCLUDED.username
        RETURNING id, username, email, avatar_url`,
       [username, email]
     );
