@@ -1,0 +1,124 @@
+import { useState } from 'react'
+import { clearCache, fetchMappedManga, fetchRawManga, getPopularManga } from '../lib/anilist.js'
+
+const btnPrimary =
+  'rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50'
+const btnOutline =
+  'rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50'
+
+const IDLE = { status: 'idle', message: 'ยังไม่ได้ส่ง request', output: '' }
+
+function ApiLab() {
+  const [term, setTerm] = useState('')
+  const [state, setState] = useState(IDLE)
+  const loading = state.status === 'loading'
+
+  async function run(task) {
+    setState({ status: 'loading', message: 'กำลังส่ง request...', output: '' })
+    try {
+      const { data, note } = await task()
+      setState({ status: 'success', message: note, output: JSON.stringify(data, null, 2) })
+    } catch (e) {
+      setState({ status: 'error', message: e.message, output: '' })
+    }
+  }
+
+  const showRaw = () =>
+    run(async () => {
+      const t0 = performance.now()
+      const data = await fetchRawManga(term.trim())
+      return { data, note: `ได้ JSON ดิบจาก AniList (${Math.round(performance.now() - t0)} ms)` }
+    })
+
+  const showMapped = () =>
+    run(async () => {
+      const t0 = performance.now()
+      const data = await fetchMappedManga(term.trim())
+      return {
+        data,
+        note: `ผ่าน toManga แล้ว ${data.length} รายการ (${Math.round(performance.now() - t0)} ms)`,
+      }
+    })
+
+  const showPopular = () =>
+    run(async () => {
+      const { items, source, ms } = await getPopularManga()
+      return {
+        data: items,
+        note:
+          source === 'cache'
+            ? `อ่านจาก cache (localStorage) ใน ${ms} ms`
+            : `ยิง API จริงใน ${ms} ms แล้วเก็บลง cache`,
+      }
+    })
+
+  const onClearCache = () => {
+    const n = clearCache()
+    setState({ status: 'idle', message: `ล้าง cache แล้ว (${n} รายการ)`, output: '' })
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-12">
+      <h1 className="text-2xl font-semibold text-slate-900">API Lab</h1>
+      <p className="mt-2 text-slate-600">
+        กดปุ่มแล้วดูว่า AniList ตอบอะไรกลับมา ก่อนจะเอาไปใช้ในหน้าจริง
+      </p>
+
+      <div className="mt-6 flex flex-wrap gap-3">
+        <input
+          type="text"
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="ชื่อมังงะ เช่น one piece"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        />
+        <button type="button" onClick={showRaw} disabled={loading} className={btnPrimary}>
+          ดู JSON ดิบ
+        </button>
+        <button type="button" onClick={showMapped} disabled={loading} className={btnOutline}>
+          ผ่าน toManga แล้ว
+        </button>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-4">
+        <button type="button" onClick={showPopular} disabled={loading} className={btnOutline}>
+          getManga() มังงะยอดนิยม ผ่าน cache รายวัน
+        </button>
+        <button
+          type="button"
+          onClick={onClearCache}
+          className="text-sm text-slate-600 underline hover:text-emerald-700"
+        >
+          ล้าง cache
+        </button>
+      </div>
+
+      <p className="mt-4 text-sm text-slate-500">
+        กดครั้งแรกจะช้า (ยิงจริง) กดซ้ำจะเร็วมาก (อ่านจาก localStorage)
+      </p>
+      <p className="mt-2 break-all font-mono text-xs text-slate-400">
+        POST https://graphql.anilist.co {'{'} Page {'{'} media(type: MANGA, search: "{term}") {'}'}{' '}
+        {'}'}
+      </p>
+
+      <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+        <p className="font-semibold text-slate-700">
+          สถานะ: <span className="font-normal">{state.status}</span>
+        </p>
+        <p
+          className={`mt-2 text-sm ${state.status === 'error' ? 'text-red-600' : 'text-slate-600'}`}
+        >
+          {state.message}
+        </p>
+        {state.output && (
+          <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-white p-3 text-xs text-slate-700">
+            {state.output}
+          </pre>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
+export default ApiLab;
