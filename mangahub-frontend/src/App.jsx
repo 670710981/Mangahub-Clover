@@ -7,6 +7,7 @@ import About from './pages/About.jsx'
 import ApiLab from './pages/ApiLab.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
+import Profile from './pages/Profile.jsx'
 
 function App() {
   return (
@@ -19,9 +20,10 @@ function App() {
         <Route path="api-lab" element={<ApiLab />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
+        <Route path="profile" element={<Profile />} />
       </Route>
     </Routes>
   )
 }
 
-export default App;
+export default App

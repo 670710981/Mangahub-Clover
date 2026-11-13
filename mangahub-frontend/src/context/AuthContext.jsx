@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
     const found = users.find((u) => u.email === normalized && u.password === password)
     if (!found) return { ok: false, error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }
 
-    const session = { name: found.name, email: found.email }
+    const session = { name: found.name, email: found.email, avatar: found.avatar }
     write(SESSION_KEY, session)
     setUser(session)
     return { ok: true }
@@ -54,7 +54,54 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
-  const value = useMemo(() => ({ user, register, login, logout }), [user, register, login, logout])
+  const changePassword = useCallback(
+    ({ current, next }) => {
+      if (!user) return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อน' }
+      const users = read(USERS_KEY, [])
+      const index = users.findIndex((u) => u.email === user.email)
+      if (index === -1) return { ok: false, error: 'ไม่พบบัญชีผู้ใช้' }
+      if (users[index].password !== current) {
+        return { ok: false, error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' }
+      }
+      if (next.length < 8) return { ok: false, error: 'รหัสผ่านใหม่ต้องมี 8 ตัวขึ้นไป' }
+
+      users[index] = { ...users[index], password: next }
+      try {
+        write(USERS_KEY, users)
+      } catch {
+        return { ok: false, error: 'บันทึกรหัสผ่านไม่สำเร็จ' }
+      }
+      return { ok: true }
+    },
+    [user],
+  )
+
+  // avatar เป็น data URL ของรูปที่ย่อแล้ว (ไม่ส่งค่า = ใช้ตัวอักษรแรกของชื่อ)
+  const updateAvatar = useCallback(
+    (avatar) => {
+      if (!user) return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อน' }
+      const users = read(USERS_KEY, [])
+      const index = users.findIndex((u) => u.email === user.email)
+      if (index === -1) return { ok: false, error: 'ไม่พบบัญชีผู้ใช้' }
+
+      users[index] = { ...users[index], avatar }
+      const session = { ...user, avatar }
+      try {
+        write(USERS_KEY, users)
+        write(SESSION_KEY, session)
+      } catch {
+        return { ok: false, error: 'บันทึกรูปไม่สำเร็จ (พื้นที่เก็บข้อมูลของเบราว์เซอร์เต็ม)' }
+      }
+      setUser(session)
+      return { ok: true }
+    },
+    [user],
+  )
+
+  const value = useMemo(
+    () => ({ user, register, login, logout, changePassword, updateAvatar }),
+    [user, register, login, logout, changePassword, updateAvatar],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
