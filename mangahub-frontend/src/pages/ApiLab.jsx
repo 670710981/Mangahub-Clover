@@ -1,120 +1,162 @@
-import { useState } from 'react'
-import { fetchGenres, fetchMangaPage } from '../lib/mangaApi.js'
+import { useMemo, useState } from 'react'
+import { fetchMappedManga, fetchMangaPage, fetchRawManga } from '../lib/mangaApi.js'
 
-const btnPrimary =
-  'rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50'
-const btnOutline =
-  'rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50'
+const IDLE = { status: 'idle', message: 'ยังไม่ได้ส่ง request', output: '', path: '' }
 
-const IDLE = { status: 'idle', message: 'ยังไม่ได้ส่ง request', output: '' }
-
-function ApiLab() {
+export default function ApiLab() {
   const [term, setTerm] = useState('')
   const [state, setState] = useState(IDLE)
   const loading = state.status === 'loading'
 
-  async function run(task) {
-    setState({ status: 'loading', message: 'กำลังส่ง request...', output: '' })
+  const searchPath = useMemo(() => {
+    const params = new URLSearchParams({ page: '1', perPage: '5', search: term.trim() })
+    return `/api/mangas?${params}`
+  }, [term])
+
+  async function run(task, path, successText) {
+    setState({ status: 'loading', message: 'กำลังส่ง request ไปยัง Go API...', output: '', path })
+    const started = performance.now()
+
     try {
-      const { data, note } = await task()
-      setState({ status: 'success', message: note, output: JSON.stringify(data, null, 2) })
-    } catch (e) {
-      setState({ status: 'error', message: e.message, output: '' })
+      const data = await task()
+      const elapsed = Math.round(performance.now() - started)
+      setState({
+        status: 'success',
+        message: `${successText} (${elapsed} ms)`,
+        output: JSON.stringify(data, null, 2),
+        path,
+      })
+    } catch (error) {
+      setState({ status: 'error', message: error.message, output: '', path })
     }
   }
 
-  const showRaw = () =>
-    run(async () => {
-      const t0 = performance.now()
-      const data = await fetchGenres()
-      return { data, note: `ได้ประเภทจาก Go API (${Math.round(performance.now() - t0)} ms)` }
-    })
+  function showRaw() {
+    return run(
+      () => fetchRawManga({ page: 1, perPage: 5, search: term.trim() }),
+      searchPath,
+      'ได้ JSON ดิบจาก Go API / Supabase',
+    )
+  }
 
-  const showMapped = () =>
-    run(async () => {
-      const t0 = performance.now()
-      const { items: data } = await fetchMangaPage({ page: 1, perPage: 10, search: term.trim() })
-      return {
-        data,
-        note: `ได้ข้อมูล ${data.length} รายการจาก Supabase ผ่าน Go (${Math.round(performance.now() - t0)} ms)`,
-      }
-    })
+  function showMapped() {
+    return run(
+      () => fetchMappedManga({ page: 1, perPage: 5, search: term.trim() }),
+      searchPath,
+      'แปลงข้อมูลด้วย mapManga() แล้ว',
+    )
+  }
 
-  const showPopular = () =>
-    run(async () => {
-      const t0 = performance.now()
-      const { items } = await fetchMangaPage({ page: 1, perPage: 10 })
-      return {
-        data: items,
-        note: `ได้ข้อมูล ${items.length} รายการจาก Supabase ผ่าน Go (${Math.round(performance.now() - t0)} ms)`,
-      }
-    })
-
-  const onClearCache = () => {
-    setState({ status: 'idle', message: 'ข้อมูลหน้าเว็บอ่านจาก Go API', output: '' })
+  function showPopular() {
+    return run(
+      async () => (await fetchMangaPage({ page: 1, perPage: 10 })).items,
+      '/api/mangas?page=1&perPage=10',
+      'ได้มังงะยอดนิยมจาก Supabase ผ่าน Go API',
+    )
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="text-2xl font-semibold text-slate-900">API Lab</h1>
-      <p className="mt-2 text-slate-600">
-        ตรวจสอบข้อมูลที่ frontend อ่านจาก Supabase ผ่าน Go API
-      </p>
-
-      <div className="mt-6 flex flex-wrap gap-3">
-        <input
-          type="text"
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-          placeholder="ชื่อมังงะ เช่น one piece"
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-        />
-        <button type="button" onClick={showRaw} disabled={loading} className={btnPrimary}>
-          ดูประเภทจาก Go
-        </button>
-        <button type="button" onClick={showMapped} disabled={loading} className={btnOutline}>
-          ค้นหาจาก Supabase
-        </button>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-4">
-        <button type="button" onClick={showPopular} disabled={loading} className={btnOutline}>
-          ดูมังงะยอดนิยมจาก Supabase
-        </button>
-        <button
-          type="button"
-          onClick={onClearCache}
-          className="text-sm text-slate-600 underline hover:text-emerald-700"
-        >
-          สถานะข้อมูล
-        </button>
-      </div>
-
-      <p className="mt-4 text-sm text-slate-500">
-        ข้อมูลถูกนำเข้าจาก AniList โดย backend แล้วอ่านจากฐานข้อมูล Supabase
-      </p>
-      <p className="mt-2 break-all font-mono text-xs text-slate-400">
-        GET /api/mangas?page=1&perPage=10&search={term}
-      </p>
-
-      <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-        <p className="font-semibold text-slate-700">
-          สถานะ: <span className="font-normal">{state.status}</span>
+    <main className="min-h-[calc(100vh-8rem)] bg-[#f6fdfa] px-4 py-10 text-slate-900 sm:px-8 sm:py-12">
+      <div className="mx-auto max-w-7xl">
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">API Lab</h1>
+        <p className="mt-3 text-sm text-slate-600 sm:text-base">
+          ทดลองเรียก MangaHub Go API และเปรียบเทียบ JSON ดิบกับข้อมูลที่แปลงแล้ว
         </p>
-        <p
-          className={`mt-2 text-sm ${state.status === 'error' ? 'text-red-600' : 'text-slate-600'}`}
+
+        <form
+          className="mt-6 flex flex-col gap-3 lg:flex-row"
+          onSubmit={(event) => {
+            event.preventDefault()
+            showRaw()
+          }}
         >
-          {state.message}
-        </p>
-        {state.output && (
-          <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-white p-3 text-xs text-slate-700">
-            {state.output}
-          </pre>
-        )}
+          <input
+            type="search"
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
+            placeholder="ค้นหาชื่อมังงะ เช่น One Piece"
+            className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+          >
+            ดู JSON ดิบ
+          </button>
+          <button
+            type="button"
+            onClick={showMapped}
+            disabled={loading}
+            className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500 disabled:opacity-50"
+          >
+            ผ่าน mapManga()
+          </button>
+        </form>
+
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={showPopular}
+            disabled={loading}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500 disabled:opacity-50"
+          >
+            getManga() · มังงะยอดนิยม
+          </button>
+          <button
+            type="button"
+            onClick={() => setState(IDLE)}
+            disabled={loading}
+            className="px-2 py-2 text-sm text-slate-500 underline underline-offset-4 hover:text-emerald-700 disabled:opacity-50"
+          >
+            ล้างผลลัพธ์
+          </button>
+          <p className="text-xs text-slate-500">Browser เรียก Go API; ข้อมูลอ่านจาก Supabase</p>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-3 font-mono text-xs">
+          {state.path && (
+            <span className="rounded-md bg-emerald-100 px-2.5 py-1.5 font-bold text-emerald-700">
+              GET
+            </span>
+          )}
+          <span className="break-all text-slate-500">{state.path || searchPath}</span>
+        </div>
+
+        <section className="mt-6 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/60">
+          <div className="flex flex-wrap items-center gap-3 border-b border-emerald-100 px-5 py-4">
+            <span className="text-sm text-slate-600">สถานะ</span>
+            <span
+              className={`text-sm font-semibold ${
+                state.status === 'success'
+                  ? 'text-emerald-700'
+                  : state.status === 'error'
+                    ? 'text-rose-600'
+                    : state.status === 'loading'
+                      ? 'text-sky-700'
+                      : 'text-slate-500'
+              }`}
+            >
+              {state.status}
+            </span>
+             {state.status !== 'idle' && (
+            <span className={`text-sm ${state.status === 'error' ? 'text-rose-600' : 'text-slate-600'}`}>
+                {state.message}
+              </span>
+            )}
+          </div>
+
+          {state.output ? (
+            <pre className="m-4 max-h-[560px] overflow-auto rounded-xl bg-white p-5 font-mono text-xs leading-6 text-slate-800 sm:text-sm">
+              {state.output}
+            </pre>
+          ) : (
+            <p className="px-5 py-8 font-mono text-sm text-slate-500">
+              {state.status === 'idle' ? 'ยังไม่ได้ส่ง request' : 'กดปุ่มเพื่อดูผลลัพธ์ JSON'}
+            </p>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   )
 }
-
-
-export default ApiLab;

@@ -4,6 +4,7 @@ import (
 	"context"
 	"mangahub-backend-go/config"
 	"mangahub-backend-go/models"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -103,6 +104,65 @@ func CreateManga(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"message": "เพิ่มมังงะไม่สำเร็จ", "error": err.Error()})
 	}
 	return c.Status(201).JSON(body)
+}
+
+// PUT /api/mangas/:id (เฉพาะ Admin)
+func UpdateManga(c *fiber.Ctx) error {
+	var body models.Manga
+	if err := c.BodyParser(&body); err != nil || body.Title == "" {
+		return c.Status(400).JSON(fiber.Map{"message": "กรุณาระบุชื่อมังงะ"})
+	}
+	if body.Status == "" {
+		body.Status = "unknown"
+	}
+	err := config.DB.QueryRow(context.Background(), `
+		UPDATE mangas
+		SET title = $2, author = $3, genre = $4, status = $5,
+		    synopsis = $6, cover_url = $7, score = $8, chapters = $9
+		WHERE COALESCE(anilist_id, id) = $1
+		RETURNING id, COALESCE(anilist_id, id), created_at`,
+		c.Params("id"), body.Title, body.Author, body.Genre, body.Status,
+		body.Synopsis, body.CoverURL, body.Score, body.Chapters,
+	).Scan(&body.ID, &body.AnilistID, &body.CreatedAt)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"message": "ไม่พบมังงะหรือแก้ไขไม่สำเร็จ"})
+	}
+	return c.JSON(body)
+}
+
+// DELETE /api/mangas/:id (เฉพาะ Admin)
+func DeleteManga(c *fiber.Ctx) error {
+	ctx := context.Background()
+	tx, err := config.DB.Begin(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "เริ่มรายการลบไม่สำเร็จ"})
+	}
+	defer tx.Rollback(ctx)
+
+	var localID int
+	var anilistID *int
+	err = tx.QueryRow(ctx, `SELECT id, anilist_id FROM mangas WHERE COALESCE(anilist_id, id) = $1`, c.Params("id")).Scan(&localID, &anilistID)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"message": "ไม่พบมังงะ"})
+	}
+	if _, err = tx.Exec(ctx, `DELETE FROM reviews WHERE manga_id = $1`, localID); err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "ลบรีวิวของมังงะไม่สำเร็จ"})
+	}
+	localIDText := strconv.Itoa(localID)
+	if anilistID != nil {
+		if _, err = tx.Exec(ctx, `DELETE FROM favorites WHERE manga_id = $1 OR manga_id = $2`, strconv.Itoa(*anilistID), localIDText); err != nil {
+			return c.Status(500).JSON(fiber.Map{"message": "ลบรายการโปรดของมังงะไม่สำเร็จ"})
+		}
+	} else if _, err = tx.Exec(ctx, `DELETE FROM favorites WHERE manga_id = $1`, localIDText); err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "ลบรายการโปรดของมังงะไม่สำเร็จ"})
+	}
+	if _, err = tx.Exec(ctx, `DELETE FROM mangas WHERE id = $1`, localID); err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "ลบมังงะไม่สำเร็จ"})
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "บันทึกการลบไม่สำเร็จ"})
+	}
+	return c.JSON(fiber.Map{"message": "ลบมังงะแล้ว"})
 }
 
 // GET /api/manga/:id/reviews

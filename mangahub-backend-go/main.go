@@ -22,7 +22,7 @@ func main() {
 
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "https://mangahub-clover-rho.vercel.app, http://localhost:3000",
+		AllowOrigins: "https://mangahub-clover-rho.vercel.app, http://localhost:3000, http://127.0.0.1:3000",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
 
@@ -51,7 +51,12 @@ func main() {
 	api.Get("/genres", handlers.GetGenres)
 	api.Get("/mangas/:id", handlers.GetMangaByID)
 	api.Post("/mangas", middleware.AuthenticateToken, middleware.RequireAdmin, handlers.CreateManga)
+	api.Put("/mangas/:id", middleware.AuthenticateToken, middleware.RequireAdmin, handlers.UpdateManga)
+	api.Delete("/mangas/:id", middleware.AuthenticateToken, middleware.RequireAdmin, handlers.DeleteManga)
 	api.Post("/admin/anilist/sync", middleware.AuthenticateToken, middleware.RequireAdmin, handlers.SyncAniList)
+	api.Get("/admin/stats", middleware.AuthenticateToken, middleware.RequireAdmin, handlers.GetAdminStats)
+	api.Get("/admin/users", middleware.AuthenticateToken, middleware.RequireAdmin, handlers.GetAdminUsers)
+	api.Patch("/admin/users/:id/role", middleware.AuthenticateToken, middleware.RequireAdmin, handlers.UpdateAdminUserRole)
 
 	// Review Routes
 	api.Get("/manga/:id/reviews", handlers.GetReviews)

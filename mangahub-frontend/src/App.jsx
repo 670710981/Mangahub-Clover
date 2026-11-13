@@ -9,6 +9,9 @@ import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import Profile from './pages/Profile.jsx'
 import Favorites from './pages/Favorites.jsx'
+import Admin from './pages/Admin.jsx'
+import AdminMangas from './pages/AdminMangas.jsx'
+import AdminUsers from './pages/AdminUsers.jsx'
 
 function App() {
   return (
@@ -23,6 +26,9 @@ function App() {
         <Route path="register" element={<Register />} />
         <Route path="profile" element={<Profile />} />
         <Route path="favorites" element={<Favorites />} />
+        <Route path="admin" element={<Admin />} />
+        <Route path="admin/mangas" element={<AdminMangas />} />
+        <Route path="admin/users" element={<AdminUsers />} />
       </Route>
     </Routes>
   )

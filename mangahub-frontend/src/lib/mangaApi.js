@@ -22,19 +22,31 @@ function mapManga(m) {
   return {
     id: m.anilist_id || m.id,
     title: m.title,
+    author: m.author || '',
     cover: m.cover_url || '',
     score: m.score ?? null,
     type: 'MANGA',
     genres,
+    status: m.status || '',
     description: m.synopsis || '',
     chapters: m.chapters ?? null,
+    reviewCount: m.review_count ?? 0,
   }
 }
 
 export async function fetchMangaPage({ page = 1, perPage = 30, search = '', genre = '' } = {}) {
-  const params = new URLSearchParams({ page, perPage, search, genre: genre || '' })
-  const result = await request(`/mangas?${params}`)
+  const result = await fetchRawManga({ page, perPage, search, genre })
   return { items: result.items.map(mapManga), hasNext: result.has_next }
+}
+
+export function fetchRawManga({ page = 1, perPage = 10, search = '', genre = '' } = {}) {
+  const params = new URLSearchParams({ page, perPage, search, genre: genre || '' })
+  return request(`/mangas?${params}`)
+}
+
+export async function fetchMappedManga(params = {}) {
+  const result = await fetchRawManga(params)
+  return result.items.map(mapManga)
 }
 
 export async function fetchMangaById(id) {
@@ -86,5 +98,54 @@ export function submitReview(mangaId, { rating, comment }) {
     method: 'POST',
     authenticated: true,
     body: { rating, comment },
+  })
+}
+
+export function fetchAdminStats() {
+  return request('/admin/stats', { authenticated: true })
+}
+
+export function syncAniList(pages) {
+  return request('/admin/anilist/sync', {
+    method: 'POST',
+    authenticated: true,
+    body: { pages },
+  })
+}
+
+export function updateManga(manga) {
+  return request(`/mangas/${encodeURIComponent(manga.id)}`, {
+    method: 'PUT',
+    authenticated: true,
+    body: {
+      title: manga.title.trim(),
+      author: manga.author || null,
+      genre: Array.isArray(manga.genres) ? manga.genres.join(', ') : manga.genres,
+      status: manga.status || 'unknown',
+      synopsis: manga.description || null,
+      cover_url: manga.cover || null,
+      score: manga.score,
+      chapters: manga.chapters,
+    },
+  })
+}
+
+export function deleteManga(id) {
+  return request(`/mangas/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    authenticated: true,
+  })
+}
+
+export function fetchAdminUsers({ page = 1, perPage = 50, search = '' } = {}) {
+  const params = new URLSearchParams({ page, perPage, search })
+  return request(`/admin/users?${params}`, { authenticated: true })
+}
+
+export function updateAdminUserRole(id, role) {
+  return request(`/admin/users/${encodeURIComponent(id)}/role`, {
+    method: 'PATCH',
+    authenticated: true,
+    body: { role },
   })
 }

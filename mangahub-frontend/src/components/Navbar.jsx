@@ -57,6 +57,13 @@ export default function Navbar() {
           About
         </NavLink>
 
+        {user?.role === 'admin' && (
+          <NavLink to="/admin" className={linkClass}>
+            Admin
+          </NavLink>
+        )}
+
+
         <div className="ml-auto flex items-center gap-2">
           <NavLink to="/api-lab" className={linkClass}>
             API Lab
