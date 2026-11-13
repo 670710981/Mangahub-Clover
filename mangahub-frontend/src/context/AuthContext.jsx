@@ -1,99 +1,129 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
-const USERS_KEY = 'mangahub:users'
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8080/api'
 const SESSION_KEY = 'mangahub:session'
+const TOKEN_KEY = 'mangahub:token'
 
-function read(key, fallback) {
+function readSession() {
   try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
+    const raw = localStorage.getItem(SESSION_KEY)
+    return raw ? JSON.parse(raw) : null
   } catch {
-    return fallback
+    return null
   }
 }
 
-function write(key, value) {
-  localStorage.setItem(key, JSON.stringify(value))
+async function sendRequest(path, { method = 'POST', body, authenticated = false } = {}) {
+  const headers = { 'Content-Type': 'application/json' }
+
+  if (authenticated) {
+    const token = localStorage.getItem(TOKEN_KEY)
+    if (token) headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers,
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  })
+
+  const data = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new Error(data?.message || `HTTP ${response.status}`)
+  }
+
+  return data
+}
+
+function saveSession(data, setUser) {
+  const account = {
+    id: data.user.id,
+    name: data.user.username,
+    email: data.user.email,
+    avatar: data.user.avatar_url,
+    role: data.user.role,
+  }
+
+  localStorage.setItem(TOKEN_KEY, data.token)
+  localStorage.setItem(SESSION_KEY, JSON.stringify(account))
+  setUser(account)
 }
 
 const AuthContext = createContext(null)
 
-// prototype ฝั่ง client อย่างเดียว: เก็บบัญชีใน localStorage (ยังไม่มี Backend)
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => read(SESSION_KEY, null))
+  const [user, setUser] = useState(readSession)
 
-  const register = useCallback(({ name, email, password }) => {
-    const users = read(USERS_KEY, [])
-    const normalized = email.trim().toLowerCase()
-    if (users.some((u) => u.email === normalized)) {
-      return { ok: false, error: 'อีเมลนี้ถูกใช้สมัครแล้ว' }
+  const register = useCallback(async ({ name, email, password }) => {
+    try {
+      const data = await sendRequest('/auth/register', {
+        body: {
+          username: name.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+        },
+      })
+
+      saveSession(data, setUser)
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, error: error.message }
     }
-    users.push({ name: name.trim(), email: normalized, password })
-    write(USERS_KEY, users)
-
-    const session = { name: name.trim(), email: normalized }
-    write(SESSION_KEY, session)
-    setUser(session)
-    return { ok: true }
   }, [])
 
-  const login = useCallback(({ email, password }) => {
-    const users = read(USERS_KEY, [])
-    const normalized = email.trim().toLowerCase()
-    const found = users.find((u) => u.email === normalized && u.password === password)
-    if (!found) return { ok: false, error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }
+  const login = useCallback(async ({ email, password }) => {
+    try {
+      const data = await sendRequest('/auth/login', {
+        body: {
+          email: email.trim().toLowerCase(),
+          password,
+        },
+      })
 
-    const session = { name: found.name, email: found.email, avatar: found.avatar }
-    write(SESSION_KEY, session)
-    setUser(session)
-    return { ok: true }
+      saveSession(data, setUser)
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, error: error.message }
+    }
   }, [])
 
   const logout = useCallback(() => {
     localStorage.removeItem(SESSION_KEY)
+    localStorage.removeItem(TOKEN_KEY)
     setUser(null)
   }, [])
 
-  const changePassword = useCallback(
-    ({ current, next }) => {
-      if (!user) return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อน' }
-      const users = read(USERS_KEY, [])
-      const index = users.findIndex((u) => u.email === user.email)
-      if (index === -1) return { ok: false, error: 'ไม่พบบัญชีผู้ใช้' }
-      if (users[index].password !== current) {
-        return { ok: false, error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' }
-      }
-      if (next.length < 8) return { ok: false, error: 'รหัสผ่านใหม่ต้องมี 8 ตัวขึ้นไป' }
-
-      users[index] = { ...users[index], password: next }
-      try {
-        write(USERS_KEY, users)
-      } catch {
-        return { ok: false, error: 'บันทึกรหัสผ่านไม่สำเร็จ' }
-      }
+  const changePassword = useCallback(async ({ current, next }) => {
+    try {
+      await sendRequest('/auth/change-password', {
+        method: 'PUT',
+        authenticated: true,
+        body: {
+          currentPassword: current,
+          newPassword: next,
+        },
+      })
       return { ok: true }
-    },
-    [user],
-  )
+    } catch (error) {
+      return { ok: false, error: error.message }
+    }
+  }, [])
 
-  // avatar เป็น data URL ของรูปที่ย่อแล้ว (ไม่ส่งค่า = ใช้ตัวอักษรแรกของชื่อ)
+  // Avatar ยังบันทึกไว้ในเบราว์เซอร์ ยังไม่ได้ส่งไปเก็บในฐานข้อมูล
   const updateAvatar = useCallback(
     (avatar) => {
       if (!user) return { ok: false, error: 'กรุณาเข้าสู่ระบบก่อน' }
-      const users = read(USERS_KEY, [])
-      const index = users.findIndex((u) => u.email === user.email)
-      if (index === -1) return { ok: false, error: 'ไม่พบบัญชีผู้ใช้' }
 
-      users[index] = { ...users[index], avatar }
-      const session = { ...user, avatar }
+      const updatedUser = { ...user, avatar }
+
       try {
-        write(USERS_KEY, users)
-        write(SESSION_KEY, session)
+        localStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser))
+        setUser(updatedUser)
+        return { ok: true }
       } catch {
-        return { ok: false, error: 'บันทึกรูปไม่สำเร็จ (พื้นที่เก็บข้อมูลของเบราว์เซอร์เต็ม)' }
+        return { ok: false, error: 'บันทึกรูปไม่สำเร็จ' }
       }
-      setUser(session)
-      return { ok: true }
     },
     [user],
   )

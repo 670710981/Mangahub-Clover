@@ -13,27 +13,29 @@ function Register() {
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
-  const onSubmit = (e) => {
-    e.preventDefault()
-    if (!form.name.trim()) {
-      setError('กรุณากรอกชื่อที่แสดง')
-      return
-    }
-    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
-      setError('รูปแบบอีเมลไม่ถูกต้อง')
-      return
-    }
-    if (form.password.length < 8) {
-      setError('รหัสผ่านต้องมี 8 ตัวขึ้นไป')
-      return
-    }
-    const result = register(form)
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-    navigate('/')
+  const onSubmit = async (e) => {
+  e.preventDefault()
+  if (!form.name.trim()) {
+    setError('กรุณากรอกชื่อที่แสดง')
+    return
   }
+  if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
+    setError('รูปแบบอีเมลไม่ถูกต้อง')
+    return
+  }
+  if (form.password.length < 8) {
+    setError('รหัสผ่านต้องมี 8 ตัวขึ้นไป')
+    return
+  }
+
+  const result = await register(form)
+  if (!result.ok) {
+    setError(result.error)
+    return
+  }
+
+  navigate('/')
+}
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">

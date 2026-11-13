@@ -13,19 +13,21 @@ function Login() {
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
-  const onSubmit = (e) => {
-    e.preventDefault()
-    if (!form.email.trim() || !form.password) {
-      setError('กรุณากรอกอีเมลและรหัสผ่าน')
-      return
-    }
-    const result = login(form)
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
-    navigate('/')
+  const onSubmit = async (e) => {
+  e.preventDefault()
+  if (!form.email.trim() || !form.password) {
+    setError('กรุณากรอกอีเมลและรหัสผ่าน')
+    return
   }
+
+  const result = await login(form)
+  if (!result.ok) {
+    setError(result.error)
+    return
+  }
+
+  navigate('/')
+}
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
