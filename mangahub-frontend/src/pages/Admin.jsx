@@ -16,7 +16,6 @@ export default function Admin() {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
 
   const refreshDashboard = useCallback(async () => {
     setError('')
