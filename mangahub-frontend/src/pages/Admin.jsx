@@ -55,7 +55,7 @@ export default function Admin() {
           </div>
            <div className="flex gap-2">
             
-            <Link to="/admin/mangas" className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">
+            <Link to="/admin/mangas" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-emerald-300 hover:text-emerald-700">
               จัดการมังงะ
             </Link>
 
