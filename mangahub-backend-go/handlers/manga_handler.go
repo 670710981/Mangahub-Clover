@@ -13,27 +13,60 @@ func GetMangas(c *fiber.Ctx) error {
 	search := "%" + c.Query("search", "") + "%"
 	genre := "%" + c.Query("genre", "") + "%"
 
+	page := c.QueryInt("page", 1)
+	perPage := c.QueryInt("perPage", 30)
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 {
+		perPage = 30
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
 	rows, err := config.DB.Query(context.Background(),
-		`SELECT m.id, m.title, m.author, m.genre, m.status, m.synopsis, m.cover_url, m.created_at,
+		`SELECT m.id, COALESCE(m.anilist_id, m.id), m.title, m.author, m.genre, m.status, m.synopsis, m.cover_url, m.score, m.chapters, m.created_at,
 		        COALESCE(ROUND(AVG(r.rating), 1), 0)::float8 AS avg_rating,
 		        COUNT(r.id)::int AS review_count
 		 FROM mangas m
 		 LEFT JOIN reviews r ON m.id = r.manga_id
 		 WHERE m.title ILIKE $1 AND COALESCE(m.genre, '') ILIKE $2
 		 GROUP BY m.id
-		 ORDER BY m.id DESC`, search, genre)
+			 ORDER BY m.id DESC LIMIT $3 OFFSET $4`, search, genre, perPage+1, (page-1)*perPage)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "ดึงข้อมูลล้มเหลว", "error": err.Error()})
 	}
 	defer rows.Close()
 
 	mangas := []models.Manga{}
+	hasNext := false
 	for rows.Next() {
 		var m models.Manga
-		rows.Scan(&m.ID, &m.Title, &m.Author, &m.Genre, &m.Status, &m.Synopsis, &m.CoverURL, &m.CreatedAt, &m.AvgRating, &m.ReviewCount)
+		rows.Scan(&m.ID, &m.AnilistID, &m.Title, &m.Author, &m.Genre, &m.Status, &m.Synopsis, &m.CoverURL, &m.Score, &m.Chapters, &m.CreatedAt, &m.AvgRating, &m.ReviewCount)
+		if len(mangas) == perPage {
+			hasNext = true
+			break
+		}
 		mangas = append(mangas, m)
 	}
-	return c.JSON(mangas)
+	return c.JSON(fiber.Map{"items": mangas, "has_next": hasNext})
+}
+
+// GET /api/genres
+func GetGenres(c *fiber.Ctx) error {
+	rows, err := config.DB.Query(context.Background(), `SELECT DISTINCT trim(g) FROM mangas, unnest(string_to_array(COALESCE(genre,''), ',')) AS g WHERE trim(g) <> '' ORDER BY 1`)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "ดึงประเภทมังงะไม่สำเร็จ"})
+	}
+	defer rows.Close()
+	genres := []string{}
+	for rows.Next() {
+		var g string
+		if rows.Scan(&g) == nil {
+			genres = append(genres, g)
+		}
+	}
+	return c.JSON(genres)
 }
 
 // GET /api/mangas/:id
@@ -41,8 +74,8 @@ func GetMangaByID(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var m models.Manga
 	err := config.DB.QueryRow(context.Background(),
-		`SELECT id, title, author, genre, status, synopsis, cover_url, created_at FROM mangas WHERE id = $1`, id,
-	).Scan(&m.ID, &m.Title, &m.Author, &m.Genre, &m.Status, &m.Synopsis, &m.CoverURL, &m.CreatedAt)
+		`SELECT id, COALESCE(anilist_id, id), title, author, genre, status, synopsis, cover_url, score, chapters, created_at FROM mangas WHERE COALESCE(anilist_id, id) = $1`, id,
+	).Scan(&m.ID, &m.AnilistID, &m.Title, &m.Author, &m.Genre, &m.Status, &m.Synopsis, &m.CoverURL, &m.Score, &m.Chapters, &m.CreatedAt)
 
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"message": "ไม่พบมังงะ"})

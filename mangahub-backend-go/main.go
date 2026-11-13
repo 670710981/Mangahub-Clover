@@ -48,8 +48,10 @@ func main() {
 
 	// Manga Routes (Guest อ่านได้ / Admin เพิ่มได้)
 	api.Get("/mangas", handlers.GetMangas)
+	api.Get("/genres", handlers.GetGenres)
 	api.Get("/mangas/:id", handlers.GetMangaByID)
 	api.Post("/mangas", middleware.AuthenticateToken, middleware.RequireAdmin, handlers.CreateManga)
+	api.Post("/admin/anilist/sync", middleware.AuthenticateToken, middleware.RequireAdmin, handlers.SyncAniList)
 
 	// Review Routes
 	api.Get("/manga/:id/reviews", handlers.GetReviews)

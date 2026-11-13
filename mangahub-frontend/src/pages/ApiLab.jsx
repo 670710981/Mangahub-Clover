@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { clearCache, fetchMappedManga, fetchRawManga, getPopularManga } from '../lib/anilist.js'
+import { fetchGenres, fetchMangaPage } from '../lib/mangaApi.js'
 
 const btnPrimary =
   'rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50'
@@ -26,42 +26,39 @@ function ApiLab() {
   const showRaw = () =>
     run(async () => {
       const t0 = performance.now()
-      const data = await fetchRawManga(term.trim())
-      return { data, note: `ได้ JSON ดิบจาก AniList (${Math.round(performance.now() - t0)} ms)` }
+      const data = await fetchGenres()
+      return { data, note: `ได้ประเภทจาก Go API (${Math.round(performance.now() - t0)} ms)` }
     })
 
   const showMapped = () =>
     run(async () => {
       const t0 = performance.now()
-      const data = await fetchMappedManga(term.trim())
+      const { items: data } = await fetchMangaPage({ page: 1, perPage: 10, search: term.trim() })
       return {
         data,
-        note: `ผ่าน toManga แล้ว ${data.length} รายการ (${Math.round(performance.now() - t0)} ms)`,
+        note: `ได้ข้อมูล ${data.length} รายการจาก Supabase ผ่าน Go (${Math.round(performance.now() - t0)} ms)`,
       }
     })
 
   const showPopular = () =>
     run(async () => {
-      const { items, source, ms } = await getPopularManga()
+      const t0 = performance.now()
+      const { items } = await fetchMangaPage({ page: 1, perPage: 10 })
       return {
         data: items,
-        note:
-          source === 'cache'
-            ? `อ่านจาก cache (localStorage) ใน ${ms} ms`
-            : `ยิง API จริงใน ${ms} ms แล้วเก็บลง cache`,
+        note: `ได้ข้อมูล ${items.length} รายการจาก Supabase ผ่าน Go (${Math.round(performance.now() - t0)} ms)`,
       }
     })
 
   const onClearCache = () => {
-    const n = clearCache()
-    setState({ status: 'idle', message: `ล้าง cache แล้ว (${n} รายการ)`, output: '' })
+    setState({ status: 'idle', message: 'ข้อมูลหน้าเว็บอ่านจาก Go API', output: '' })
   }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="text-2xl font-semibold text-slate-900">API Lab</h1>
       <p className="mt-2 text-slate-600">
-        กดปุ่มแล้วดูว่า AniList ตอบอะไรกลับมา ก่อนจะเอาไปใช้ในหน้าจริง
+        ตรวจสอบข้อมูลที่ frontend อ่านจาก Supabase ผ่าน Go API
       </p>
 
       <div className="mt-6 flex flex-wrap gap-3">
@@ -73,32 +70,31 @@ function ApiLab() {
           className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
         />
         <button type="button" onClick={showRaw} disabled={loading} className={btnPrimary}>
-          ดู JSON ดิบ
+          ดูประเภทจาก Go
         </button>
         <button type="button" onClick={showMapped} disabled={loading} className={btnOutline}>
-          ผ่าน toManga แล้ว
+          ค้นหาจาก Supabase
         </button>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-4">
         <button type="button" onClick={showPopular} disabled={loading} className={btnOutline}>
-          getManga() มังงะยอดนิยม ผ่าน cache รายวัน
+          ดูมังงะยอดนิยมจาก Supabase
         </button>
         <button
           type="button"
           onClick={onClearCache}
           className="text-sm text-slate-600 underline hover:text-emerald-700"
         >
-          ล้าง cache
+          สถานะข้อมูล
         </button>
       </div>
 
       <p className="mt-4 text-sm text-slate-500">
-        กดครั้งแรกจะช้า (ยิงจริง) กดซ้ำจะเร็วมาก (อ่านจาก localStorage)
+        ข้อมูลถูกนำเข้าจาก AniList โดย backend แล้วอ่านจากฐานข้อมูล Supabase
       </p>
       <p className="mt-2 break-all font-mono text-xs text-slate-400">
-        POST https://graphql.anilist.co {'{'} Page {'{'} media(type: MANGA, search: "{term}") {'}'}{' '}
-        {'}'}
+        GET /api/mangas?page=1&perPage=10&search={term}
       </p>
 
       <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">

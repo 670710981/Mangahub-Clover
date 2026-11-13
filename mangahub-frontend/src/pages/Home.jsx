@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import MangaCard from '../components/MangaCard.jsx'
-import { fetchMangaPage } from '../lib/anilist.js'
+import { fetchMangaPage } from '../lib/mangaApi.js'
 
 function shuffle(list) {
   const a = [...list]
@@ -23,12 +23,7 @@ function Home() {
       .then(({ items }) => {
         if (cancelled) return
         // สุ่มลำดับมังงะ และสุ่มจำนวนตอนให้แต่ละเรื่อง
-        setItems(
-          shuffle(items).map((manga) => ({
-            manga,
-            chapters: 1 + Math.floor(Math.random() * 500),
-          })),
-        )
+        setItems(shuffle(items).map((manga) => ({ manga, chapters: manga.chapters })))
         setStatus('success')
       })
       .catch((e) => {

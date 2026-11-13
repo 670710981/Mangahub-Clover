@@ -1,0 +1,5 @@
+-- Run once in the Supabase SQL editor before syncing AniList.
+ALTER TABLE mangas ADD COLUMN IF NOT EXISTS anilist_id BIGINT;
+ALTER TABLE mangas ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION;
+ALTER TABLE mangas ADD COLUMN IF NOT EXISTS chapters INTEGER;
+CREATE UNIQUE INDEX IF NOT EXISTS mangas_anilist_id_unique ON mangas (anilist_id);

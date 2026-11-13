@@ -15,12 +15,15 @@ type User struct {
 
 type Manga struct {
 	ID          int       `json:"id"`
+	AnilistID   int       `json:"anilist_id"`
 	Title       string    `json:"title"`
 	Author      *string   `json:"author"`
 	Genre       *string   `json:"genre"`
 	Status      string    `json:"status"`
 	Synopsis    *string   `json:"synopsis"`
 	CoverURL    *string   `json:"cover_url"`
+	Score       *float64  `json:"score"`
+	Chapters    *int      `json:"chapters"`
 	AvgRating   float64   `json:"avg_rating"`
 	ReviewCount int       `json:"review_count"`
 	CreatedAt   time.Time `json:"created_at"`

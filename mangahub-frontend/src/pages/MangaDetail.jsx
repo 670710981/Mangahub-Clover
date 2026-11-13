@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Stars from '../components/Stars.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { fetchMangaById } from '../lib/anilist.js'
+import { fetchMangaById } from '../lib/mangaApi.js'
 
 export default function MangaDetail() {
   const { id } = useParams()

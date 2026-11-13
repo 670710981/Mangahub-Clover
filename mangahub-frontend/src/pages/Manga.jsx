@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import MangaCard from '../components/MangaCard.jsx'
-import { fetchGenres, fetchMangaPage } from '../lib/anilist.js'
+import { fetchGenres, fetchMangaPage } from '../lib/mangaApi.js'
 
 // เรียง a-z ก่อน แล้วตามด้วย ก-ฮ
 const collator = new Intl.Collator(['en', 'th'])
