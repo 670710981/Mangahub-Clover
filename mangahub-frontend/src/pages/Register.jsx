@@ -19,6 +19,10 @@ function Register() {
     setError('กรุณากรอกชื่อที่แสดง')
     return
   }
+  if (!form.email.trim()) {
+    setError('กรุณากรอกอีเมล')
+    return
+  }
   if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
     setError('รูปแบบอีเมลไม่ถูกต้อง')
     return
