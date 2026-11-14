@@ -101,6 +101,13 @@ export function submitReview(mangaId, { rating, comment }) {
   })
 }
 
+export function deleteReview(reviewId) {
+  return request(`/reviews/${encodeURIComponent(reviewId)}`, {
+    method: 'DELETE',
+    authenticated: true,
+  })
+}
+
 export function fetchAdminStats() {
   return request('/admin/stats', { authenticated: true })
 }

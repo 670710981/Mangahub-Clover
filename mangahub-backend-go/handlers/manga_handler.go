@@ -232,6 +232,22 @@ func PostReview(c *fiber.Ctx) error {
 	return c.Status(201).JSON(fiber.Map{"status": "success", "message": "Review submitted successfully", "data": rev})
 }
 
+// DELETE /api/reviews/:id (เฉพาะ Admin)
+func DeleteReview(c *fiber.Ctx) error {
+	reviewID, err := strconv.Atoi(c.Params("id"))
+	if err != nil || reviewID < 1 {
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "รหัสรีวิวไม่ถูกต้อง"})
+	}
+	tag, err := config.DB.Exec(context.Background(), `DELETE FROM reviews WHERE id = $1`, reviewID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "ลบรีวิวไม่สำเร็จ"})
+	}
+	if tag.RowsAffected() == 0 {
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "ไม่พบรีวิวนี้"})
+	}
+	return c.JSON(fiber.Map{"status": "success", "message": "ลบรีวิวแล้ว"})
+}
+
 // GET /api/favorites
 func GetFavorites(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(int)

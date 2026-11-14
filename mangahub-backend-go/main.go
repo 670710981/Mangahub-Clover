@@ -61,6 +61,7 @@ func main() {
 	// Review Routes
 	api.Get("/manga/:id/reviews", handlers.GetReviews)
 	api.Post("/manga/:id/reviews", middleware.AuthenticateToken, handlers.PostReview)
+	api.Delete("/reviews/:id", middleware.AuthenticateToken, middleware.RequireAdmin, handlers.DeleteReview)
 
 	// Favorite Routes
 	api.Get("/favorites", middleware.AuthenticateToken, handlers.GetFavorites)

@@ -10,6 +10,7 @@ import {
   fetchMangaById,
   fetchReviews,
   removeFavorite,
+  deleteReview,
   submitReview,
 } from '../lib/mangaApi.js'
 
@@ -26,6 +27,7 @@ export default function MangaDetail() {
   const [reviewError, setReviewError] = useState('')
   const [reviewMessage, setReviewMessage] = useState('')
   const [reviewBusy, setReviewBusy] = useState(false)
+  const [reviewDeleteBusy, setReviewDeleteBusy] = useState(null)
   const [rating, setRating] = useState(8)
   const [comment, setComment] = useState('')
 
@@ -112,6 +114,21 @@ export default function MangaDetail() {
     }
   }
 
+  async function onDeleteReview(review) {
+    if (reviewDeleteBusy !== null || !window.confirm('ยืนยันลบรีวิวนี้หรือไม่?')) return
+    setReviewDeleteBusy(review.id)
+    setReviewMessage('')
+    try {
+      await deleteReview(review.id)
+      setReviewData(await fetchReviews(id))
+      setReviewMessage('ลบรีวิวแล้ว')
+    } catch (err) {
+      setReviewMessage(err.message)
+    } finally {
+      setReviewDeleteBusy(null)
+    }
+  }
+
   if (status === 'loading') {
     return <p className="mx-auto max-w-5xl px-4 py-10 text-sm text-slate-500">กำลังโหลด...</p>
   }
@@ -192,11 +209,24 @@ export default function MangaDetail() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-semibold text-slate-800">{review.username}</p>
+                    <div className="flex items-center gap-3"></div>
                     <time className="text-xs text-slate-400">{new Date(review.created_at).toLocaleDateString('th-TH')}</time>
+                      {user?.role === 'admin' && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteReview(review)}
+                          disabled={reviewDeleteBusy !== null}
+                          aria-label={`ลบรีวิวของ ${review.username}`}
+                          className="text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+                        >
+                          {reviewDeleteBusy === review.id ? 'กำลังลบ...' : 'ลบรีวิว'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p className="mt-1 text-sm font-medium text-amber-600">คะแนน {review.rating}/10</p>
                   <p className="mt-2 whitespace-pre-line leading-6 text-slate-600">{review.comment}</p>
-                </div>
+                
               </article>
             ))}
           </div>
@@ -236,7 +266,7 @@ export default function MangaDetail() {
           ) : (
             <p className="mt-3 text-sm text-slate-600"><Link to="/login" className="font-semibold text-emerald-700 underline">เข้าสู่ระบบ</Link> เพื่อเขียนรีวิว</p>
           )}
-          {reviewMessage && <p className="mt-3 text-sm text-emerald-700">{reviewMessage}</p>}
+          {reviewMessage && <p className={`mt-3 text-sm ${reviewMessage.includes('ไม่สำเร็จ') ? 'text-red-600' : 'text-emerald-700'}`}>{reviewMessage}</p>}
         </form>
       </section>
     </div>
