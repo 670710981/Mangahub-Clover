@@ -1,13 +1,19 @@
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext.jsx'
+import App from './App.jsx'
 
-test('renders the original MangaHub navigation structure with manga styling', () => {
-  render(<App />);
+test('renders the MangaHub navigation and home page', () => {
+  render(
+    <MemoryRouter initialEntries={['/']}>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </MemoryRouter>,
+  )
 
-  expect(screen.getByRole('navigation')).toHaveTextContent(/MANGA\s*HUB/i);
-  expect(screen.getByRole('link', { name: 'หน้าแรก' })).toHaveAttribute('href', '#home');
-  expect(screen.getByRole('link', { name: 'หนังใหม่' })).toHaveAttribute('href', '#latest');
-  expect(screen.getByRole('link', { name: 'รายการโปรด' })).toHaveAttribute('href', '#favorites');
-  expect(screen.getByRole('button', { name: 'เข้าสู่ระบบ' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: /ดูหนังดี ๆ ไปด้วยกัน/i })).toBeInTheDocument();
-});
+  expect(screen.getByRole('link', { name: 'MangaHub' })).toHaveAttribute('href', '/')
+  expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
+  expect(screen.getByRole('link', { name: 'Manga' })).toHaveAttribute('href', '/manga')
+  expect(screen.getByRole('link', { name: 'Login' })).toBeInTheDocument()
+})
